@@ -1,0 +1,860 @@
+{
+  "manifest_schema_version": 3,
+  "sdk_version": "5.13.0",
+  "app_id": "sage-intacct-connector",
+  "version": "0.1.0",
+  "name": "Sage Intacct",
+  "description": "Connect your own Sage Intacct company (OAuth2) to manage customers, vendors, employees, AR invoices, AP bills, payments, GL accounts, journal entries, departments, entities, projects, items and tax details -- full read/write plus value-add cash position and overdue-invoice reports.",
+  "icon": "icon.svg",
+  "actions_explicit": true,
+  "system": false,
+  "capabilities": [
+    "sage_intacct:read",
+    "sage_intacct:write"
+  ],
+  "tools": [
+    {
+      "name": "connect_sage_intacct",
+      "description": "Start connecting your Sage Intacct company: register your Sage Intacct app's Client ID/Client Secret, then get back a one-time browser authorize_url. Open it, sign in with Sage Intacct, and approve access -- Sage Intacct redirects back here automatically and the connection finishes itself. Important: you must also separately authorize this app as a client application inside your Sage Intacct company (Company > Setup > Configuration > Authorized client applications) for calls to succeed.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [
+        "sage_intacct.connection.pending"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "client_id": {
+            "default": "",
+            "description": "Your Sage Intacct app's Client ID (developer.sage.com/intacct).",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "client_secret": {
+            "default": "",
+            "description": "Your Sage Intacct app's Client Secret.",
+            "title": "Client Secret",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "description": "Optional friendly label for this connection, e.g. 'Acme US entity'.",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "title": "ConnectSageIntacctParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "authorize_url": {
+            "description": "Open this URL in a browser to sign in with Sage Intacct and approve access. Remember to also authorize this app as a client application inside your Sage Intacct company (Company > Setup > Configuration).",
+            "title": "Authorize Url",
+            "type": "string"
+          },
+          "redirect_uri": {
+            "description": "The callback URL registered for this attempt (must match a Redirect URI configured on your Sage Intacct app).",
+            "title": "Redirect Uri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authorize_url",
+          "redirect_uri"
+        ],
+        "title": "ConsentUrlResult",
+        "type": "object"
+      },
+      "event": "sage-intacct-connector.connect",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "sage_intacct"
+    },
+    {
+      "name": "list_connections",
+      "description": "List the connected Sage Intacct companies.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "description": "Explicit empty params model -- V17 disallows untyped handlers.",
+        "properties": {},
+        "title": "NoParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "$defs": {
+          "ProviderConnection": {
+            "properties": {
+              "id": {
+                "default": "",
+                "title": "Id",
+                "type": "string"
+              },
+              "label": {
+                "default": "",
+                "title": "Label",
+                "type": "string"
+              },
+              "default_entity_id": {
+                "default": "",
+                "title": "Default Entity Id",
+                "type": "string"
+              },
+              "entities": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Entities",
+                "type": "array"
+              }
+            },
+            "title": "ProviderConnection",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "connections": {
+            "items": {
+              "$ref": "#/$defs/ProviderConnection"
+            },
+            "title": "Connections",
+            "type": "array"
+          }
+        },
+        "title": "ProviderConnectionList",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "sage_intacct"
+    },
+    {
+      "name": "disconnect_sage_intacct",
+      "description": "Disconnect a Sage Intacct connection: deletes the saved connection. Nothing in Sage Intacct itself is changed.",
+      "action_type": "destructive",
+      "chain_callable": true,
+      "effects": [
+        "sage_intacct.connection.removed"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Which connection to disconnect (see list_connections). Omit if only one exists.",
+            "title": "Connection Id",
+            "type": "string"
+          }
+        },
+        "title": "DisconnectSageIntacctParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "deleted": {
+            "default": true,
+            "title": "Deleted",
+            "type": "boolean"
+          },
+          "entity": {
+            "default": "",
+            "title": "Entity",
+            "type": "string"
+          },
+          "record_key": {
+            "default": "",
+            "title": "Record Key",
+            "type": "string"
+          }
+        },
+        "title": "DeleteResult",
+        "type": "object"
+      },
+      "event": "sage-intacct-connector.disconnect",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "sage_intacct"
+    },
+    {
+      "name": "list_entities",
+      "description": "List Sage Intacct records of any object type (customer, vendor, employee, ar-invoice, ap-bill, ap-payment, ar-payment, general-ledger-account, journal-entry, journal, department, location, project, item, tax-detail), with an optional filter.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Which connected Sage Intacct company to use (see list_connections). Omit if only one company is connected.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "entity_id": {
+            "default": "",
+            "description": "Which child entity to target, for multi-entity companies. Omit to use the connection's default entity.",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity": {
+            "description": "Sage Intacct object name, e.g. 'customer', 'vendor', 'ar-invoice', 'ap-bill', 'general-ledger-account', 'journal-entry', 'department', 'location', 'project', 'item', 'tax-detail', 'employee'.",
+            "title": "Entity",
+            "type": "string"
+          },
+          "filter_json": {
+            "default": "",
+            "description": "Optional Sage Intacct REST v1 filter object as a JSON string, e.g. '{\"$eq\":{\"status\":\"active\"}}'.",
+            "title": "Filter Json",
+            "type": "string"
+          },
+          "limit": {
+            "default": 100,
+            "description": "Max records to return (Sage Intacct default page size applies if omitted).",
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entity"
+        ],
+        "title": "ListEntitiesParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "entity": {
+            "default": "",
+            "title": "Entity",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "count": {
+            "default": 0,
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "title": "EntityList",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "sage_intacct"
+    },
+    {
+      "name": "get_entity",
+      "description": "Read one Sage Intacct record of any object type in full by its key.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Which connected Sage Intacct company to use (see list_connections). Omit if only one company is connected.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "entity_id": {
+            "default": "",
+            "description": "Which child entity to target, for multi-entity companies. Omit to use the connection's default entity.",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity": {
+            "description": "Sage Intacct object name, e.g. 'customer', 'ar-invoice'.",
+            "title": "Entity",
+            "type": "string"
+          },
+          "entity_key": {
+            "description": "The record's key (Sage Intacct's own record 'key' field, not always the human-readable id).",
+            "title": "Entity Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity",
+          "entity_key"
+        ],
+        "title": "GetEntityParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "entity": {
+            "default": "",
+            "title": "Entity",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          }
+        },
+        "title": "EntityDetail",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "sage_intacct"
+    },
+    {
+      "name": "create_entity",
+      "description": "Create a new Sage Intacct record of any object type from a JSON object of its fields exactly as Sage Intacct expects.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [
+        "sage_intacct.entity.created"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Which connected Sage Intacct company to use (see list_connections). Omit if only one company is connected.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "entity_id": {
+            "default": "",
+            "description": "Which child entity to target, for multi-entity companies. Omit to use the connection's default entity.",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity": {
+            "description": "Sage Intacct object name to create, e.g. 'customer', 'ar-invoice'.",
+            "title": "Entity",
+            "type": "string"
+          },
+          "fields_json": {
+            "description": "JSON object of the new record's fields exactly as Sage Intacct expects.",
+            "title": "Fields Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity",
+          "fields_json"
+        ],
+        "title": "CreateEntityParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "entity": {
+            "default": "",
+            "title": "Entity",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          }
+        },
+        "title": "EntityDetail",
+        "type": "object"
+      },
+      "event": "sage-intacct-connector.create_entity",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "sage_intacct"
+    },
+    {
+      "name": "update_entity",
+      "description": "Update selected fields of an existing Sage Intacct record. Only the fields in fields_json change.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [
+        "sage_intacct.entity.updated"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Which connected Sage Intacct company to use (see list_connections). Omit if only one company is connected.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "entity_id": {
+            "default": "",
+            "description": "Which child entity to target, for multi-entity companies. Omit to use the connection's default entity.",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity": {
+            "description": "Sage Intacct object name to update.",
+            "title": "Entity",
+            "type": "string"
+          },
+          "entity_key": {
+            "description": "The record's key to update.",
+            "title": "Entity Key",
+            "type": "string"
+          },
+          "fields_json": {
+            "description": "JSON object of only the fields to change.",
+            "title": "Fields Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity",
+          "entity_key",
+          "fields_json"
+        ],
+        "title": "UpdateEntityParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "entity": {
+            "default": "",
+            "title": "Entity",
+            "type": "string"
+          },
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          }
+        },
+        "title": "EntityDetail",
+        "type": "object"
+      },
+      "event": "sage-intacct-connector.update_entity",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "sage_intacct"
+    },
+    {
+      "name": "delete_entity",
+      "description": "Delete a Sage Intacct record of any object type by its key. Cannot be undone.",
+      "action_type": "write",
+      "chain_callable": true,
+      "effects": [
+        "sage_intacct.entity.deleted"
+      ],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Which connected Sage Intacct company to use (see list_connections). Omit if only one company is connected.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "entity_id": {
+            "default": "",
+            "description": "Which child entity to target, for multi-entity companies. Omit to use the connection's default entity.",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity": {
+            "description": "Sage Intacct object name to delete from.",
+            "title": "Entity",
+            "type": "string"
+          },
+          "entity_key": {
+            "description": "The record's key to delete.",
+            "title": "Entity Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity",
+          "entity_key"
+        ],
+        "title": "DeleteEntityParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "deleted": {
+            "default": true,
+            "title": "Deleted",
+            "type": "boolean"
+          },
+          "entity": {
+            "default": "",
+            "title": "Entity",
+            "type": "string"
+          },
+          "record_key": {
+            "default": "",
+            "title": "Record Key",
+            "type": "string"
+          }
+        },
+        "title": "DeleteResult",
+        "type": "object"
+      },
+      "event": "sage-intacct-connector.delete_entity",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "sage_intacct"
+    },
+    {
+      "name": "run_query",
+      "description": "Run a flexible query against any Sage Intacct object with optional filter/field projection/order-by/limit -- the most flexible way to filter, sort, or project any Sage Intacct data.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Which connected Sage Intacct company to use (see list_connections). Omit if only one company is connected.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "entity_id": {
+            "default": "",
+            "description": "Which child entity to target, for multi-entity companies. Omit to use the connection's default entity.",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity": {
+            "description": "Sage Intacct object name to query.",
+            "title": "Entity",
+            "type": "string"
+          },
+          "filter_json": {
+            "default": "",
+            "description": "Optional filter object as JSON string.",
+            "title": "Filter Json",
+            "type": "string"
+          },
+          "fields_json": {
+            "default": "",
+            "description": "Optional JSON array of field names to project, e.g. '[\"key\",\"customername\",\"balance\"]'. Omit for all fields.",
+            "title": "Fields Json",
+            "type": "string"
+          },
+          "order_by_json": {
+            "default": "",
+            "description": "Optional JSON array of order-by objects, e.g. '[{\"customername\":\"asc\"}]'.",
+            "title": "Order By Json",
+            "type": "string"
+          },
+          "limit": {
+            "default": 100,
+            "description": "Max records to return.",
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entity"
+        ],
+        "title": "RunQueryParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "count": {
+            "default": 0,
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "title": "QueryResult",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "sage_intacct"
+    },
+    {
+      "name": "get_company_info",
+      "description": "Read the connected Sage Intacct company's own profile: company id, name, base currency, and its child entities.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Which connected Sage Intacct company to use (see list_connections). Omit if only one company is connected.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "entity_id": {
+            "default": "",
+            "description": "Which child entity to target, for multi-entity companies. Omit to use the connection's default entity.",
+            "title": "Entity Id",
+            "type": "string"
+          }
+        },
+        "title": "GetCompanyInfoParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "company_id": {
+            "default": "",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "company_name": {
+            "default": "",
+            "title": "Company Name",
+            "type": "string"
+          },
+          "base_currency": {
+            "default": "",
+            "title": "Base Currency",
+            "type": "string"
+          },
+          "entities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Entities",
+            "type": "array"
+          }
+        },
+        "title": "CompanyInfo",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "sage_intacct"
+    },
+    {
+      "name": "get_cash_position",
+      "description": "Value-add report: one-glance cash position for the connected Sage Intacct company -- bank account balances plus total open AR and AP, computed by scanning ar-invoice/ap-bill open balances.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Which connected Sage Intacct company to use (see list_connections). Omit if only one company is connected.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "entity_id": {
+            "default": "",
+            "description": "Which child entity to target, for multi-entity companies. Omit to use the connection's default entity.",
+            "title": "Entity Id",
+            "type": "string"
+          }
+        },
+        "title": "GetCompanyInfoParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "as_of": {
+            "default": "",
+            "title": "As Of",
+            "type": "string"
+          },
+          "bank_accounts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Bank Accounts",
+            "type": "array"
+          },
+          "total_cash": {
+            "default": 0.0,
+            "title": "Total Cash",
+            "type": "number"
+          },
+          "total_ar_open": {
+            "default": 0.0,
+            "title": "Total Ar Open",
+            "type": "number"
+          },
+          "total_ap_open": {
+            "default": 0.0,
+            "title": "Total Ap Open",
+            "type": "number"
+          }
+        },
+        "title": "CashPositionReport",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "sage_intacct"
+    },
+    {
+      "name": "get_overdue_invoices",
+      "description": "Value-add report: flag every AR invoice overdue by at least a given number of days.",
+      "action_type": "read",
+      "chain_callable": true,
+      "effects": [],
+      "id_projection": "",
+      "params_schema": {
+        "properties": {
+          "connection_id": {
+            "default": "",
+            "description": "Which connected Sage Intacct company to use (see list_connections). Omit if only one company is connected.",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "entity_id": {
+            "default": "",
+            "description": "Which child entity to target, for multi-entity companies. Omit to use the connection's default entity.",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "min_days_overdue": {
+            "default": 1,
+            "description": "Only include invoices overdue by at least this many days.",
+            "title": "Min Days Overdue",
+            "type": "integer"
+          }
+        },
+        "title": "OverdueReportParams",
+        "type": "object"
+      },
+      "return_schema": {
+        "properties": {
+          "invoices": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Invoices",
+            "type": "array"
+          },
+          "total_overdue_amount": {
+            "default": 0.0,
+            "title": "Total Overdue Amount",
+            "type": "number"
+          }
+        },
+        "title": "OverdueInvoicesReport",
+        "type": "object"
+      },
+      "event": "",
+      "background": false,
+      "long_running": false,
+      "scopes": [],
+      "owner_chat_tool": "sage_intacct"
+    }
+  ],
+  "signals": [],
+  "schedules": [],
+  "required_scopes": [],
+  "icon_size_bytes": 677,
+  "webhooks": [
+    {
+      "path": "/callback",
+      "method": "POST",
+      "secret_header": ""
+    }
+  ],
+  "lifecycle": {
+    "health_check": {
+      "interval_sec": 60
+    }
+  },
+  "secrets": [
+    {
+      "name": "sage_intacct_connections",
+      "description": "JSON array of connected Sage Intacct OAuth grants: client_id/client_secret (your own Sage Intacct app), access_token, refresh_token, expiry timestamps, default_entity_id, and label. Managed through connect_sage_intacct / disconnect_sage_intacct -- you should not need to edit this directly.",
+      "required": true,
+      "write_mode": "both",
+      "max_bytes": 65536,
+      "scope": "user",
+      "rotation_hint_days": 90
+    },
+    {
+      "name": "sage_intacct_pending",
+      "description": "JSON array of in-flight Sage Intacct OAuth connection attempts (client_id/client_secret captured at connect_sage_intacct time, keyed by a pending id used as the OAuth `state`), consumed and removed by the callback webhook once the code-for-token exchange completes. write_mode='extension': only connector code writes this, never the Panel UI directly.",
+      "required": false,
+      "write_mode": "extension",
+      "max_bytes": 16384,
+      "scope": "user"
+    }
+  ],
+  "panels": [
+    {
+      "panel_id": "secrets",
+      "slot": "right",
+      "title": "Secrets",
+      "tree": {},
+      "icon": "KeyRound",
+      "refresh": "manual",
+      "center_overlay": false
+    },
+    {
+      "panel_id": "sage_intacct_connect",
+      "slot": "left",
+      "title": "Sage Intacct",
+      "tree": {},
+      "icon": "📊",
+      "refresh": "manual",
+      "center_overlay": false,
+      "default_width": 320,
+      "min_width": 260,
+      "max_width": 420
+    },
+    {
+      "panel_id": "sage_intacct_connect_help",
+      "slot": "center",
+      "title": "How to connect Sage Intacct",
+      "tree": {},
+      "icon": "",
+      "refresh": "manual",
+      "center_overlay": true
+    },
+    {
+      "panel_id": "sage_intacct_settings",
+      "slot": "center",
+      "title": "Sage Intacct -- App settings",
+      "tree": {},
+      "icon": "",
+      "refresh": "manual",
+      "center_overlay": false
+    }
+  ]
+}
