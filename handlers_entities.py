@@ -48,7 +48,7 @@ async def list_entities(ctx, params: ListEntitiesParams) -> ActionResult:
     rows = result.get("ia::result", []) if isinstance(result, dict) else []
     if not isinstance(rows, list):
         rows = [rows]
-    return ActionResult.ok(EntityList(entity=params.entity, rows=rows, count=len(rows)))
+    return ActionResult.success(EntityList(entity=params.entity, rows=rows, count=len(rows))), summary="Entities listed."
 
 
 @chat.function(
@@ -63,7 +63,7 @@ async def get_entity(ctx, params: GetEntityParams) -> ActionResult:
         return err
     result = await sc.request(ctx, conn, "GET", _path(params.entity) + "/" + params.entity_key, action="get " + params.entity)
     data = result.get("ia::result", {}) if isinstance(result, dict) else result
-    return ActionResult.ok(EntityDetail(entity=params.entity, data=data))
+    return ActionResult.success(EntityDetail(entity=params.entity, data=data)), summary="Entity retrieved."
 
 
 @chat.function(
@@ -84,7 +84,7 @@ async def create_entity(ctx, params: CreateEntityParams) -> ActionResult:
         return err
     result = await sc.request(ctx, conn, "POST", _path(params.entity), json_body=body, action="create " + params.entity)
     data = result.get("ia::result", {}) if isinstance(result, dict) else result
-    return ActionResult.ok(EntityDetail(entity=params.entity, data=data))
+    return ActionResult.success(EntityDetail(entity=params.entity, data=data)), summary="Entity created."
 
 
 @chat.function(
@@ -105,7 +105,7 @@ async def update_entity(ctx, params: UpdateEntityParams) -> ActionResult:
     path = _path(params.entity) + "/" + params.entity_key
     result = await sc.request(ctx, conn, "PATCH", path, json_body=body, action="update " + params.entity)
     data = result.get("ia::result", {}) if isinstance(result, dict) else result
-    return ActionResult.ok(EntityDetail(entity=params.entity, data=data))
+    return ActionResult.success(EntityDetail(entity=params.entity, data=data)), summary="Entity updated."
 
 
 @chat.function(
@@ -122,4 +122,4 @@ async def delete_entity(ctx, params: DeleteEntityParams) -> ActionResult:
         return err
     path = _path(params.entity) + "/" + params.entity_key
     await sc.request(ctx, conn, "DELETE", path, action="delete " + params.entity)
-    return ActionResult.ok(DeleteResult(deleted=True, entity=params.entity, record_key=params.entity_key))
+    return ActionResult.success(DeleteResult(deleted=True, entity=params.entity, record_key=params.entity_key)), summary="Entity deleted."

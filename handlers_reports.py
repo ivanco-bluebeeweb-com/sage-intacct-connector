@@ -50,7 +50,7 @@ async def run_query(ctx, params: RunQueryParams) -> ActionResult:
     rows = result.get("ia::result", []) if isinstance(result, dict) else []
     if not isinstance(rows, list):
         rows = [rows]
-    return ActionResult.ok(QueryResult(rows=rows, count=len(rows)))
+    return ActionResult.success(QueryResult(rows=rows, count=len(rows))), summary="Query run requested."
 
 
 @chat.function(
@@ -66,12 +66,12 @@ async def get_company_info(ctx, params: GetCompanyInfoParams) -> ActionResult:
     result = await sc.request(ctx, conn, "GET", "/objects/company-config/company-preference", action="get company info")
     rows = result.get("ia::result", []) if isinstance(result, dict) else []
     data = rows[0] if isinstance(rows, list) and rows else (rows if isinstance(rows, dict) else {})
-    return ActionResult.ok(CompanyInfo(
+    return ActionResult.success(CompanyInfo(
         company_id=str(data.get("key", "")),
         company_name=str(data.get("name", conn.get("label", ""))),
         base_currency=str(data.get("basecurrency", "")),
         entities=conn.get("entities", []),
-    ))
+    )), summary="Company info retrieved."
 
 
 @chat.function(
@@ -115,13 +115,13 @@ async def get_cash_position(ctx, params: GetCompanyInfoParams) -> ActionResult:
         except (TypeError, ValueError):
             pass
 
-    return ActionResult.ok(CashPositionReport(
+    return ActionResult.success(CashPositionReport(
         as_of="",
         bank_accounts=[],
         total_cash=0.0,
         total_ar_open=round(total_ar, 2),
         total_ap_open=round(total_ap, 2),
-    ))
+    )), summary="Cash position retrieved."
 
 
 @chat.function(
@@ -166,4 +166,4 @@ async def get_overdue_invoices(ctx, params: OverdueReportParams) -> ActionResult
             overdue.append({**row, "days_overdue": days_overdue})
             total += amount
 
-    return ActionResult.ok(OverdueInvoicesReport(invoices=overdue, total_overdue_amount=round(total, 2)))
+    return ActionResult.success(OverdueInvoicesReport(invoices=overdue, total_overdue_amount=round(total, 2))), summary="Overdue invoices retrieved."
