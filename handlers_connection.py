@@ -171,7 +171,7 @@ async def connect_sage_intacct(ctx, params: ConnectSageIntacctParams) -> ActionR
     await _save_pending(ctx, all_pending)
 
     authorize_url = sc.build_authorize_url(params.client_id.strip(), redirect_uri, pending_id)
-    return ActionResult.success(ConsentUrlResult(authorize_url=authorize_url, redirect_uri=redirect_uri)), summary="Sage intacct connected."
+    return ActionResult.success(ConsentUrlResult(authorize_url=authorize_url, redirect_uri=redirect_uri), summary="Sage intacct connected.")
 
 
 @ext.webhook("callback")
@@ -234,7 +234,7 @@ async def handle_oauth_callback(ctx, headers, body, query_params):
 async def list_connections(ctx, params: NoParams) -> ActionResult:
     """List every connected Sage Intacct OAuth grant for this account."""
     connections = await _load_connections(ctx)
-    return ActionResult.success(ProviderConnectionList(connections=[_connection_to_entity(c) for c in connections])), summary="Connections listed."
+    return ActionResult.success(ProviderConnectionList(connections=[_connection_to_entity(c) for c in connections]), summary="Connections listed.")
 
 
 @chat.function(
@@ -253,4 +253,4 @@ async def disconnect_sage_intacct(ctx, params: DisconnectSageIntacctParams) -> A
     if len(remaining) == len(connections):
         return ActionResult.error("No such Sage Intacct connection.", code="SAGE_NOT_CONNECTED")
     await _save_connections(ctx, remaining)
-    return ActionResult.success(DeleteResult(ok=True, detail="Sage Intacct connection removed.")), summary="Sage intacct disconnected."
+    return ActionResult.success(DeleteResult(ok=True, detail="Sage Intacct connection removed."), summary="Sage intacct disconnected.")
