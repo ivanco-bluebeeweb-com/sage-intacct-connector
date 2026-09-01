@@ -152,6 +152,8 @@ async def request(ctx, conn: dict, method: str, path: str, *, entity_id: str = "
     if not access_token:
         raise ClientFail(fail(SAGE_NOT_CONNECTED))
     url = f"{API_BASE}{path}"
+    if not entity_id:
+        entity_id = conn.get("entity_id") or conn.get("default_entity_id") or ""
     headers = _headers(access_token, entity_id)
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.request(method, url, headers=headers, params=params, json=json_body)

@@ -123,14 +123,14 @@ def _connection_to_entity(c: dict) -> ProviderConnection:
 async def resolve_or_error(ctx, connection_id: str = "", entity_id: str = ""):
     conn = await resolve_connection(ctx, connection_id)
     if not conn:
-        return None, None, ActionResult.error(
+        return None, ActionResult.error(
             "No Sage Intacct connection found. Connect one with connect_sage_intacct first "
             "and open the returned authorize_url to finish the one-time login.",
             code="SAGE_NOT_CONNECTED",
         )
     conn = await ensure_fresh_token(ctx, conn)
     resolved_entity = resolve_entity_id(conn, entity_id)
-    return conn, resolved_entity, None
+    return dict(conn, entity_id=resolved_entity), None
 
 
 @chat.function(
